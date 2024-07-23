@@ -1,7 +1,5 @@
-// src/components/OpenCageAutocomplete.jsx
 import React, { useState } from 'react';
 import axios from 'axios';
-
 
 function OpenCageAutocomplete({ apiKey, onSelect }) {
   const [query, setQuery] = useState('');
@@ -11,19 +9,17 @@ function OpenCageAutocomplete({ apiKey, onSelect }) {
   const handleInputChange = async (e) => {
     const value = e.target.value;
     setQuery(value);
-   
 
     if (value.length > 2) {
       try {
         const response = await axios.get(`https://api.opencagedata.com/geocode/v1/json`, {
           params: {
             q: value,
-            key: apiKey, // Ensure this key is valid
+            key: apiKey,
             limit: 5,
           },
         });
 
-        // Check if the API returned results
         if (response.data && response.data.results) {
           setSuggestions(response.data.results);
         } else {
@@ -31,7 +27,7 @@ function OpenCageAutocomplete({ apiKey, onSelect }) {
         }
       } catch (error) {
         console.error('Error fetching location data:', error);
-        setSuggestions([]); // Clear suggestions on error
+        setSuggestions([]);
       }
     } else {
       setSuggestions([]);
@@ -55,7 +51,7 @@ function OpenCageAutocomplete({ apiKey, onSelect }) {
       />
       {suggestions.length > 0 && (
         <ul className="border border-gray-300 rounded mt-2">
-          {suggestions.map((suggestion) => (
+          {suggestions.map((suggestion, index) => (
             <li
               key={`${suggestion.geometry.lat}-${suggestion.geometry.lng}`}
               onClick={() => handleSelect(suggestion)}
@@ -71,4 +67,3 @@ function OpenCageAutocomplete({ apiKey, onSelect }) {
 }
 
 export default OpenCageAutocomplete;
-
