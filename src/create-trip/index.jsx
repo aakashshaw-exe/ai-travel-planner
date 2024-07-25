@@ -5,8 +5,18 @@ import { SelectBudgetOptions, SelectTravelsList } from '../components/constants/
 import { Button } from '../components/ui/button';
 import { toast } from "sonner";
 import { chatSession } from "@/service/AiModal";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import { FcGoogle } from "react-icons/fc";
+import { useGoogleLogin } from '@react-oauth/google';
+import axios from 'axios';
 
-// Define the AI prompt as a function
 const getAIPrompt = (formData) => `
   Generate Travel plan for Location: ${formData.location},
   for ${formData.numberOfDays} days for ${formData.traveler} with a ${formData.budget} budget.
@@ -41,6 +51,16 @@ function CreateTrip() {
         console.log(formData);
     }, [formData]);
 
+    const login = useGoogleLogin({
+        onSuccess: async (tokenResponse) => {
+            // Use the token to get user profile
+            await GetUserProfile(tokenResponse.access_token);
+        },
+        onError: (error) => {
+            console.error("Login Error:", error);
+        }
+    });
+
     const OnGenerateTrip = async () => {
         if (
             !formData.location ||
@@ -60,6 +80,25 @@ function CreateTrip() {
                 console.error("Error generating trip:", error);
                 toast("Failed to generate trip. Please try again.");
             }
+        }
+    };
+
+    const GetUserProfile = async (accessToken) => {
+        try {
+            const response = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    Accept: `application/json`
+                }
+            });
+            console.log(response.data);
+            localStorage.setItem('user', JSON.stringify(response.data));
+            setOpenDialog(false);
+            await  OnGenerateTrip();
+        } catch (error) {
+            console.error("Error fetching user profile:", error);
+            toast("Failed to fetch user profile. Please try again.");
+            setOpenDialog(false); // Ensure dialog closes even if there is an error
         }
     };
 
@@ -136,20 +175,37 @@ function CreateTrip() {
                             </div>
                         ))}
                     </div>
-
-                    <div className='my-10 justify-end flex'>
-                        <Button
-                            variant="black"
-                            onClick={OnGenerateTrip}
-                        >
-                            Generate Trip
-                        </Button>
-                    </div>
                 </div>
             </div>
+            <div className='my-10 justify-end flex'>
+                <Button
+                    variant="black"
+                    onClick={OnGenerateTrip}
+                >
+                    Generate Trip
+                </Button>
+            </div>
+            <Dialog  open={openDialog} onOpenChange={(open) => setOpenDialog(open)}>
+                <DialogContent className="bg-white">
+                    <DialogHeader className="text-center">
+                        <DialogTitle className="text-xl font-bold">Authentication Required</DialogTitle>
+                    </DialogHeader>
+                    <DialogDescription className="text-center flex flex-col p-4 space-y-8">
+                        <div className="text-lg text-gray-600 font-bold">
+                            You need to log in to generate a trip plan.
+                        </div>
+                        <div className="text-sm text-gray-500 font-medium">
+                            Sign in to the App with Google authentication securely
+                        </div>
+                        <Button onClick={login} variant="newBlack" className="w-full mt-5 flex gap-4 items-center">
+                        <FcGoogle className="h-7 w-7"/>
+                            Sign In with Google
+                        </Button>
+                    </DialogDescription>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
 
 export default CreateTrip;
-
