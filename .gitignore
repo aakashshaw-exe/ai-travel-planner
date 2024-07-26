@@ -12,9 +12,10 @@ dist
 dist-ssr
 *.local
 
-constant.jsx
+
 *.env
 .env
+constant.jsx
 
 # Editor directories and files
 .vscode/*
