@@ -44,6 +44,20 @@ function CreateTrip() {
             ...prevData,
             [name]: value
         }));
+
+    // Validate number of days
+    if (name === "numberOfDays") {
+        const numberOfDays = parseInt(value, 10);
+        if (isNaN(numberOfDays) || numberOfDays > 8 || numberOfDays < 1) {
+          // toast("Trip duration should not exceed 15 days.");
+          if (numberOfDays < 1)
+            setMaxDaysMessage("Trip duration cannot be less than 1.");
+          if (numberOfDays > 8)
+            setMaxDaysMessage("Trip duration should not exceed 8 days.");
+        } else {
+          setMaxDaysMessage("");
+        }
+      }
     };
 
     const handleSelect = (suggestion) => {
