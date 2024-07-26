@@ -14,8 +14,11 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { FcGoogle } from "react-icons/fc";
+import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { useGoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "@/service/firebaseConfig";
 
 const getAIPrompt = (formData) => `
   Generate Travel plan for Location: ${formData.location},
@@ -34,6 +37,7 @@ function CreateTrip() {
         traveler: ''
     });
     const [openDialog, setOpenDialog] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleInputChange = (name, value) => {
         setFormData(prevData => ({
@@ -62,6 +66,7 @@ function CreateTrip() {
     });
 
     const OnGenerateTrip = async () => {
+
         if (
             !formData.location ||
             !formData.numberOfDays ||
@@ -69,18 +74,48 @@ function CreateTrip() {
             !formData.traveler
         ) {
             toast("Please input data in all fields");
-        } else {
+        } 
+            setIsLoading(true);
             setOpenDialog(true);
             const AI_PROMPT = getAIPrompt(formData);
             try {
-                console.log(AI_PROMPT);
+                // console.log(AI_PROMPT);
                 const result = await chatSession.sendMessage(AI_PROMPT);
                 console.log(result.response.text());
+                    saveAiTrip(result.response.text());
             } catch (error) {
                 console.error("Error generating trip:", error);
                 toast("Failed to generate trip. Please try again.");
             }
+            setIsLoading(false);
+            setOpenDialog(false);
+        
+    };
+
+    const saveAiTrip = async (TripData) => {
+        setIsLoading(true);
+        const user = JSON.parse(localStorage.getItem('user'));
+        const docId = Date.now().toString();
+
+        let parsedTripData;
+
+        try {
+            parsedTripData = JSON.parse(TripData);
+        } catch (error) {
+            console.error("Error parsing trip data:", error);
+            toast.error("Failed to parse trip data.");
+            setIsLoading(false);
+            return;
         }
+
+        await setDoc(doc(db, "AITrips", docId), {
+            userSelection: formData,
+            tripData: parsedTripData,
+            userEmail: user?.email,
+            id: docId
+        });
+        setIsLoading(false);
+        // navigate('/view-trip/' + docId);
     };
 
     const GetUserProfile = async (accessToken) => {
@@ -94,7 +129,7 @@ function CreateTrip() {
             console.log(response.data);
             localStorage.setItem('user', JSON.stringify(response.data));
             setOpenDialog(false);
-            await  OnGenerateTrip();
+            await OnGenerateTrip();
         } catch (error) {
             console.error("Error fetching user profile:", error);
             toast("Failed to fetch user profile. Please try again.");
@@ -177,15 +212,15 @@ function CreateTrip() {
                     </div>
                 </div>
             </div>
-            <div className='my-10 justify-end flex'>
-                <Button
-                    variant="black"
-                    onClick={OnGenerateTrip}
-                >
-                    Generate Trip
+            <div className="my-14 flex justify-end">
+                <Button disable={isLoading} onClick={OnGenerateTrip}>
+                    {isLoading ?
+                        <AiOutlineLoading3Quarters className="h-7 w-7 animate-spin" />
+                        :
+                        ("Generate Trip")}
                 </Button>
             </div>
-            <Dialog  open={openDialog} onOpenChange={(open) => setOpenDialog(open)}>
+            <Dialog open={openDialog} onOpenChange={(open) => setOpenDialog(open)}>
                 <DialogContent className="bg-white">
                     <DialogHeader className="text-center">
                         <DialogTitle className="text-xl font-bold">Authentication Required</DialogTitle>
@@ -198,7 +233,7 @@ function CreateTrip() {
                             Sign in to the App with Google authentication securely
                         </div>
                         <Button onClick={login} variant="newBlack" className="w-full mt-5 flex gap-4 items-center">
-                        <FcGoogle className="h-7 w-7"/>
+                            <FcGoogle className="h-7 w-7" />
                             Sign In with Google
                         </Button>
                     </DialogDescription>
