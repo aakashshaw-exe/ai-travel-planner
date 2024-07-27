@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import OpenCageAutocomplete from '../components/OpenCageAutocomplete';
-import { apiurl } from '../components/constant';
+import { apiurl } from '@/components/constant';
 import { SelectBudgetOptions, SelectTravelsList } from '../components/constants/options';
 import { Button } from '../components/ui/button';
 import { toast } from "sonner";
