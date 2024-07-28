@@ -1,47 +1,60 @@
-import { Button } from '@/components/ui/button';
-import { GetPlaceDetails, PHOTO_REF_URL } from '@/service/GlobalApi';
-import React, { useEffect, useState } from 'react'
-import { FaLocationDot } from "react-icons/fa6";
-import { Link } from 'react-router-dom';
+import { Button } from "@/components/ui/button";
+import { GetPlaceDetails, PHOTO_REF_URL } from "@/service/GlobalApi";
+import { Target } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 function PlaceCardItem({ place }) {
-    const [photoUrl, setPhotoUrl] = useState();
+  const [photoUrl, setPhotoUrl] = useState("");
 
-    useEffect(() => {
-        place && GetPlaceImg();
-    }, [place])
+  useEffect(() => {
+    place && GetPlacePhoto();
+  }, [place]);
 
-    const GetPlaceImg = async () => {
-        const data = {
-            textQuery: place.placeName
-        }
-        const result = await GetPlaceDetails(data).then(resp => {
-            const PhotoUrl = PHOTO_REF_URL.replace('{NAME}', resp.data.places[0].photos[3].name)
-            setPhotoUrl(PhotoUrl);
+  const GetPlacePhoto = async () => {
+    const data = {
+      textQuery: place.placeName
+    };
+    const result = await GetPlaceDetails(data).then((resp) => {
+      console.log(resp.data.places[0].photos[2].name);
 
-        })
-    }
-    return (
-        <div>
-            <Link to={'https://www.google.com/maps/search/?api=1&query=' + place?.placeName + "," + place?.geoCoordinates} target='_blank'>
-                <div className='my-4 bg-gray-50 p-2 gap-2 border rounded-lg flex flex-cols-2 hover:scale-105 transition-all hover:shadow-md cursor-pointer '>
-                    <div className='py-2 mx-3'>
-                        <img src={photoUrl ? photoUrl : '/public/road-trip-vacation.jpg'} className='w-[140px] h-[140px] rounded-xl object-cover' />
-                    </div>
-                    <div>
-                        <h2 className='font-medium text-sm text-orange-600'>{place.time}</h2>
-                        <h2 className='font-bold'>{place.placeName}</h2>
-                        <p className='text-sm text-gray-500'>{place.placeDetails}</p>
-                        <h2 className='text-blue-700 text-sm'>{place.ticketPricing}</h2>
-                        <h2 className='text-sm text-yellow-500'>⭐{place.rating}</h2>
-                    </div>
-                    <div className='mt-36'>
-                        <Button><FaLocationDot /></Button>
-                    </div>
-                </div>
-            </Link>
+      const PhotoUrl = PHOTO_REF_URL.replace(
+        "{NAME}",
+        resp.data.places[0].photos[2].name
+      );
+      setPhotoUrl(PhotoUrl);
+    });
+  };
+  return (
+    <Link
+      to={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+        place.placeName
+      )}`}
+      target="_blank"
+      className="block"
+    >
+      <div className="shadow-md border rounded-sm p-4 mt-3 flex flex-col md:flex-row gap-5 hover:scale-105 transition-transform duration-300">
+        <img
+          src={photoUrl}
+          alt={place.placeName}
+          className="w-full h-48 md:w-48 md:h-36 object-cover rounded-lg"
+        />
+        <div className="mt-3 md:mt-0 flex flex-col justify-between">
+          <h2 className="font-bold text-xl md:text-lg">{place.placeName}</h2>
+          <p className="font-medium text-sm md:text-base">
+            {place.placeDetails}
+          </p>
+          <p className="font-medium text-sm md:text-base">
+            <span className="text-orange-400">Travel Hours :</span>{" "}
+            {place.timeToTravel}
+          </p>
+          <p className="font-medium text-green-500 text-sm md:text-base">
+            {place.ticketsPricing}
+          </p>
         </div>
-    )
+      </div>
+    </Link>
+  );
 }
 
 export default PlaceCardItem

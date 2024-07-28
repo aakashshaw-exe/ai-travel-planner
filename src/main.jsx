@@ -8,7 +8,8 @@ import Header from './components/custom/Header.jsx';
 import { Toaster } from './components/ui/sonner.jsx';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import ViewTrip from './view-trip/[tripId]/index.jsx';
-// import MyTrips from './my-trips/index.jsx';
+import MyTrips from './my-trips/index.jsx';
+import ContactUs from "./components/contact/contactUs.jsx";
 import Footer from './view-trip/components/Footer.jsx';
   
 const router = createBrowserRouter([
@@ -24,10 +25,14 @@ const router = createBrowserRouter([
     path: '/view-trip/:tripId',
     element: <ViewTrip />
   },
-  // {
-  //   path: '/my-trips',
-  //   element: <MyTrips />
-  // }
+  {
+    path: "/contact-us",
+    element: <ContactUs/>,
+  },
+  {
+    path: '/my-trips',
+    element: <MyTrips />
+  }
 ]);
 
 

@@ -1,20 +1,11 @@
 import { Button } from "@/components/ui/button";
-import { GetPlaceDetails } from "@/service/GlobalApi";
-import {
-  Map,
-  MapPin,
-  UsersRoundIcon,
-  Wallet2,
-  Send,
-} from "lucide-react";
-import React, { useState, useEffect } from "react";
+import { GetPlaceDetails, PHOTO_REF_URL } from "@/service/GlobalApi";
+import { Map, MapPin, Send, UsersRoundIcon, Wallet2 } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
-const PHOTO_REF_URL =
-  "https://places.googleapis.com/v1/{NAME}/media?maxHeightPx=1400&maxWidthPx=1400&key=" +
-  import.meta.env.VITE_GOOGLE_PLACE_API_KEY;
-
-function InfoSection({ trip }) {
-  const [photoUrl, setPhotoUrl] = useState('');
+function UserTripCard({ trip }) {
+  const [photoUrl, setPhotoUrl] = useState("");
 
   useEffect(() => {
     const GetPlacePhoto = async () => {
@@ -24,17 +15,23 @@ function InfoSection({ trip }) {
 
       try {
         const result = await GetPlaceDetails(data);
+        console.log("GetPlaceDetails result:", result);
+
         if (result.data.places[0]?.photos?.length > 8) {
           const photoName = result.data.places[0].photos[8].name;
-          const constructedPhotoUrl = PHOTO_REF_URL.replace("{NAME}", photoName);
+          const constructedPhotoUrl = PHOTO_REF_URL.replace(
+            "{NAME}",
+            photoName
+          );
+          console.log("Constructed Photo URL:", constructedPhotoUrl);
           setPhotoUrl(constructedPhotoUrl);
         } else {
           console.warn("No photo found at index 8");
-          setPhotoUrl('/fallback-image.jpg'); // Optional: Set a fallback image if available
+          setPhotoUrl("/fallback-image.jpg"); // Optional: Set a fallback image if available
         }
       } catch (error) {
         console.error("Error fetching photo details:", error);
-        setPhotoUrl('/fallback-image.jpg'); // Optional: Set a fallback image if available
+        setPhotoUrl("/fallback-image.jpg"); // Optional: Set a fallback image if available
       }
     };
 
@@ -44,18 +41,14 @@ function InfoSection({ trip }) {
   }, [trip]);
 
   return (
-    <div>
-      {photoUrl ? (
-        <img
-          src={photoUrl}
-          className="h-[400px] w-full object-cover rounded-lg"
-          alt="Trip Hero"
-        />
-      ) : (
-        <div className="h-[300px] w-full flex items-center justify-center bg-gray-200 rounded-lg">
-          Loading image...
-        </div>
-      )}
+    <Link to={'/view-trip/'+trip?.id}>
+    <div className="hover:scale-105">
+      <img
+        src={photoUrl}
+        className="h-[400px] w-[400px] object-cover rounded-lg"
+        alt="Trip Hero"
+      />
+
       <div className="flex flex-col lg:flex-row justify-between items-center mt-5 space-y-5 lg:space-y-0 lg:space-x-5">
         <div className="flex flex-col gap-2 sm:text-sm md:text-base lg:text-lg">
           <h2 className="font-bold text-2xl flex items-center gap-1">
@@ -77,12 +70,10 @@ function InfoSection({ trip }) {
             </h2>
           </div>
         </div>
-        <Button className="flex items-center justify-center">
-          <Send className="h-6 w-6 md:h-8 md:w-8" />
-        </Button>
       </div>
     </div>
+    </Link>
   );
 }
 
-export default InfoSection;
+export default UserTripCard;
