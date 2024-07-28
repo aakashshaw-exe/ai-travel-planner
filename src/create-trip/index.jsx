@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import OpenCageAutocomplete from '../components/OpenCageAutocomplete';
-import { apiurl } from '@/components/constants';
+import { apiurl } from '../components/constant';
 import { SelectBudgetOptions, SelectTravelsList } from '../components/constants/options';
 import { Button } from '../components/ui/button';
 import { toast } from "sonner";
@@ -11,7 +11,6 @@ import {
     DialogDescription,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from "@/components/ui/dialog";
 import { FcGoogle } from "react-icons/fc";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
@@ -19,9 +18,10 @@ import { useGoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
 import { doc, setDoc } from "firebase/firestore";
 import { db } from "@/service/firebaseConfig";
+import { useNavigate } from "react-router-dom";
 
 const getAIPrompt = (formData) => `
-  Generate Travel plan for Location: ${formData.location},
+  Generate a travel plan for Location: ${formData.location},
   for ${formData.numberOfDays} days for ${formData.traveler} with a ${formData.budget} budget.
   Provide hotel options with name, address, price, image URL, geo coordinates, and rating.
   Suggest an itinerary with placeName, placeDetails, placeImageUrl, geoCoordinates, ticketPricing, rating, and timeToTravel.
@@ -38,26 +38,13 @@ function CreateTrip() {
     });
     const [openDialog, setOpenDialog] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [maxDaysMessage, setMaxDaysMessage] = useState("");
+    const navigate = useNavigate();
 
     const handleInputChange = (name, value) => {
         setFormData(prevData => ({
             ...prevData,
             [name]: value
         }));
-
-        // Validate number of days
-        if (name === "numberOfDays") {
-            const numberOfDays = parseInt(value, 10);
-            if (isNaN(numberOfDays) || numberOfDays > 8 || numberOfDays < 1) {
-                if (numberOfDays < 1)
-                    setMaxDaysMessage("Trip duration cannot be less than 1.");
-                if (numberOfDays > 8)
-                    setMaxDaysMessage("Trip duration should not exceed 8 days.");
-            } else {
-                setMaxDaysMessage("");
-            }
-        }
     };
 
     const handleSelect = (suggestion) => {
@@ -71,7 +58,6 @@ function CreateTrip() {
 
     const login = useGoogleLogin({
         onSuccess: async (tokenResponse) => {
-            // Use the token to get user profile
             await GetUserProfile(tokenResponse.access_token);
         },
         onError: (error) => {
@@ -87,24 +73,21 @@ function CreateTrip() {
             !formData.traveler
         ) {
             toast("Please input data in all fields");
-            return;
+        } else {
+            setIsLoading(true);
+            setOpenDialog(true);
+            const AI_PROMPT = getAIPrompt(formData);
+            try {
+                const result = await chatSession.sendMessage(AI_PROMPT);
+                console.log(result.response.text());
+                await saveAiTrip(result.response.text());
+            } catch (error) {
+                console.error("Error generating trip:", error);
+                toast("Failed to generate trip. Please try again.");
+            }
+            setIsLoading(false);
+            setOpenDialog(false);
         }
-
-        setIsLoading(true);
-        setOpenDialog(true);
-        const AI_PROMPT = getAIPrompt(formData);
-
-        try {
-            const result = await chatSession.sendMessage(AI_PROMPT);
-            console.log(result.response.text());
-            saveAiTrip(result.response.text());
-        } catch (error) {
-            console.error("Error generating trip:", error);
-            toast("Failed to generate trip. Please try again.");
-        }
-
-        setIsLoading(false);
-        setOpenDialog(false);
     };
 
     const saveAiTrip = async (TripData) => {
@@ -123,14 +106,20 @@ function CreateTrip() {
             return;
         }
 
-        await setDoc(doc(db, "AITrips", docId), {
-            userSelection: formData,
-            tripData: parsedTripData,
-            userEmail: user?.email,
-            id: docId
-        });
-        setIsLoading(false);
-        // navigate('/view-trip/' + docId);
+        try {
+            await setDoc(doc(db, "AITrips", docId), {
+                userSelection: formData,
+                tripData: parsedTripData,
+                userEmail: user?.email,
+                id: docId
+            });
+            navigate('/view-trip/' + docId);
+        } catch (error) {
+            console.error("Error saving trip data to Firebase:", error);
+            toast.error("Failed to save trip data. Please try again.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const GetUserProfile = async (accessToken) => {
@@ -148,7 +137,7 @@ function CreateTrip() {
         } catch (error) {
             console.error("Error fetching user profile:", error);
             toast("Failed to fetch user profile. Please try again.");
-            setOpenDialog(false); // Ensure dialog closes even if there is an error
+            setOpenDialog(false); 
         }
     };
 
@@ -161,14 +150,12 @@ function CreateTrip() {
 
             <div className='mt-20 flex flex-col gap-10'>
                 <div>
-                    <h2 className='text-xl my-3 font-medium'>
-                        What is your destination of choice?
-                    </h2>
+                    <h2 className='text-xl my-3 font-medium'>What is your destination of choice?</h2>
                     <OpenCageAutocomplete
                         apiKey={apiurl}
                         onSelect={handleSelect}
                         selectProps={{
-                            place,
+                            place: place,
                             onChange: (v) => {
                                 setPlace(v);
                                 handleInputChange('location', v);
@@ -180,18 +167,15 @@ function CreateTrip() {
                 <div>
                     <h2 className='text-xl my-3 font-medium'>How many days are you planning your trip?</h2>
                     <input
-                        placeholder='Ex.3'
+                        placeholder='Ex. 3'
                         type="number"
                         className="p-2 w-1/2 border border-gray-300 rounded"
                         onChange={(e) => handleInputChange('numberOfDays', e.target.value)}
                     />
-                    {maxDaysMessage && <p className="text-red-500">{maxDaysMessage}</p>}
                 </div>
 
                 <div>
-                    <h2 className='text-xl my-3 font-medium'>
-                        What is Your Budget?
-                    </h2>
+                    <h2 className='text-xl my-3 font-medium'>What is Your Budget?</h2>
                     <div className='grid grid-cols-3 gap-5 mt-5 text-center'>
                         {SelectBudgetOptions.map((item, index) => (
                             <div
@@ -201,17 +185,15 @@ function CreateTrip() {
                                     ${formData.budget === item.title ? 'border-2 border-black shadow-lg' : 'border-gray-300'}`}
                             >
                                 <h2 className='text-4xl'>{item.icon}</h2>
-                                <h2 className='font-bold text-lg'>{item.title}</h2>
-                                <h2 className='text-sm text-gray-500'>{item.desc}</h2>
+                                <h3 className='font-bold text-lg'>{item.title}</h3>
+                                <p className='text-sm text-gray-500'>{item.desc}</p>
                             </div>
                         ))}
                     </div>
                 </div>
 
                 <div>
-                    <h2 className='text-xl my-3 font-medium'>
-                        Who do you plan on traveling with on your next adventure?
-                    </h2>
+                    <h2 className='text-xl my-3 font-medium'>Who do you plan on traveling with on your next adventure?</h2>
                     <div className='grid grid-cols-3 gap-5 mt-5 text-center'>
                         {SelectTravelsList.map((item, index) => (
                             <div
@@ -221,36 +203,31 @@ function CreateTrip() {
                                     ${formData.traveler === item.people ? 'border-2 shadow-lg border-black' : ''}`}
                             >
                                 <h2 className='text-4xl'>{item.icon}</h2>
-                                <h2 className='font-bold text-lg'>{item.title}</h2>
-                                <h2 className='text-sm text-gray-500'>{item.desc}</h2>
+                                <h3 className='font-bold text-lg'>{item.title}</h3>
+                                <p className='text-sm text-gray-500'>{item.desc}</p>
                             </div>
                         ))}
                     </div>
                 </div>
             </div>
+
             <div className="my-14 flex justify-end">
-                <Button onClick={OnGenerateTrip} disabled={isLoading}>
-                    {isLoading ? (
-                        <AiOutlineLoading3Quarters className="h-7 w-7 animate-spin" />
-                    ) : (
-                        "Generate Trip"
-                    )}
+                <Button disabled={isLoading} onClick={login}>
+                    <FcGoogle className='mr-2' />{isLoading ? <AiOutlineLoading3Quarters className="animate-spin" /> : "Sign In with Google"}
                 </Button>
             </div>
-            <Dialog open={openDialog} onOpenChange={(open) => setOpenDialog(open)}>
-                <DialogContent className="bg-white">
-                    <DialogHeader className="text-center">
-                        <DialogTitle className="text-xl font-bold">Authentication Required</DialogTitle>
-                    </DialogHeader>
-                    <DialogDescription className="text-center mt-4">
-                        <h2 className="text-lg">Please log in to proceed with the trip generation.</h2>
-                        <button
-                            className="p-2 mt-4 border border-gray-300 rounded bg-blue-500 text-white hover:bg-blue-700"
-                            onClick={() => login()}
-                        >
-                            <FcGoogle className="inline-block mr-2" /> Sign in with Google
-                        </button>
+
+            <Dialog open={openDialog} onOpenChange={() => setOpenDialog(false)}>
+                <DialogHeader>
+                    <DialogTitle>Generating Your Trip...</DialogTitle>
+                    <DialogDescription>
+                        We are currently creating a custom travel itinerary for you. Please wait a moment.
                     </DialogDescription>
+                </DialogHeader>
+                <DialogContent>
+                    <div className="flex justify-center">
+                        {isLoading ? <AiOutlineLoading3Quarters className="animate-spin text-4xl" /> : null}
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>

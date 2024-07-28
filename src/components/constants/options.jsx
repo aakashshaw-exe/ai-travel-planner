@@ -51,3 +51,4 @@ export const SelectBudgetOptions=[
 ]
 
 
+export const placePhotoUrl = "https://api.unsplash.com/search/photos?query={NAME}&client_id=QCT-_83Y6-zlAZ64rTNvGvE1eLL_2yYQOFSi4uD0xxc"
